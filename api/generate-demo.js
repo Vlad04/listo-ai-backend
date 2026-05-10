@@ -5,7 +5,7 @@ const client = new OpenAI({
 });
 
 function setCorsHeaders(res) {
-    res.setHeader("Access-Control-Allow-Origin", "https://listoenlinea.com");
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
@@ -18,7 +18,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method !== "POST") {
-        return res.status(405).json({ error: "Método no permitido" });
+        return res.status(405).json({
+            error: "Método no permitido",
+            method: req.method
+        });
     }
 
     try {
@@ -26,7 +29,8 @@ export default async function handler(req, res) {
 
         if (!message) {
             return res.status(400).json({
-                error: "Mensaje requerido"
+                error: "Falta el mensaje",
+                detail: "El body debe incluir { message: '...' }"
             });
         }
 
@@ -36,12 +40,7 @@ export default async function handler(req, res) {
                 {
                     role: "system",
                     content: `
-Eres un asistente experto en negocios.
-
-Tu tarea es generar una DEMO en formato JSON para visualizar KPIs, tablas y gráficas.
-
 Devuelve SOLO JSON válido con esta estructura:
-
 {
   "title": "",
   "summary": "",
@@ -60,13 +59,26 @@ Devuelve SOLO JSON válido con esta estructura:
         });
 
         const text = response.output_text;
-        const json = JSON.parse(text);
+
+        let json;
+        try {
+            json = JSON.parse(text);
+        } catch (parseError) {
+            return res.status(500).json({
+                error: "La IA no devolvió JSON válido",
+                detail: parseError.message,
+                rawResponse: text
+            });
+        }
 
         return res.status(200).json(json);
+
     } catch (error) {
         return res.status(500).json({
             error: "Error generando demo",
-            detail: error.message
+            detail: error.message,
+            name: error.name,
+            status: error.status || null
         });
     }
 }
