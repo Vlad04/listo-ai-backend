@@ -1,0 +1,7 @@
+{
+    "name": "listo-ai-backend",
+    "type": "module",
+    "dependencies": {
+        "openai": "^5.0.0"
+    }
+}
